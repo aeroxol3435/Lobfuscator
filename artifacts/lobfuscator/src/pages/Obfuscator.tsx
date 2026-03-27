@@ -187,8 +187,6 @@ export default function Obfuscator() {
                 Obfuscate
               </button>
             </div>
-            {saving && <div style={{ marginTop: 8, fontSize: 11.5, color: "#8b949e" }}>Saving to database...</div>}
-            {saveMsg && <div style={{ marginTop: 8, fontSize: 11.5, color: "#3fb950" }}>{saveMsg}</div>}
           </div>
 
           {/* OUTPUT PANEL */}
