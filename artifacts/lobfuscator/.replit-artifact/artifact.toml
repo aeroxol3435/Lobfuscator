@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Lobfuscator"
+version = "1.0.0"
+id = "artifacts/lobfuscator"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23527
+
+[services.development]
+run = "pnpm --filter @workspace/lobfuscator run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/lobfuscator", "run", "build" ]
+publicDir = "artifacts/lobfuscator/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23527"
+BASE_PATH = "/"

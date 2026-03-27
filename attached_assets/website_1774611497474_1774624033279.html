@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>lobfuscator</title>
+<style>
+body{
+background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+font-family:Consolas;
+color:white;
+text-align:center;
+padding:20px;
+}
+textarea{
+width:95%;
+height:220px;
+background:#0a1a24;
+color:#00eaff;
+border:2px solid #00bfff;
+padding:10px;
+margin:10px 0;
+resize:none;
+}
+button{
+background:#00bfff;
+color:black;
+padding:10px 25px;
+border:none;
+cursor:pointer;
+margin:5px;
+font-weight:bold;
+}
+button:hover{background:#009acd;}
+</style>
+</head>
+<body>
+
+<h1>🔥 lobfuscator 🔥</h1>
+
+<textarea id="input" placeholder="Paste Lua code here..."></textarea><br>
+<button onclick="obfuscate()">Obfuscate</button>
+<button onclick="copyText()">Copy Output</button>
+<textarea id="output"></textarea>
+
+<script>
+
+function randomString(len){
+const chars="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+let out="";
+for(let i=0;i<len;i++){
+out+=chars[Math.floor(Math.random()*chars.length)];
+}
+return out;
+}
+
+function randomGarbage(){
+let txt="--[[\n";
+for(let i=0;i<40;i++){
+txt+=randomString(80)+"\n";
+}
+txt+="]]--\n\n";
+return txt;
+}
+
+function toBase64(str){
+return btoa(unescape(encodeURIComponent(str)));
+}
+
+function toOctal(str){
+let r="";
+for(let i=0;i<str.length;i++){
+r+="\\"+str.charCodeAt(i).toString(8);
+}
+return r;
+}
+
+function splitIntoThree(str){
+let p=Math.floor(str.length/3);
+return[
+str.substring(0,p),
+str.substring(p,p*2),
+str.substring(p*2)
+];
+}
+
+function obfuscate(){
+
+let input=document.getElementById("input").value;
+if(!input){alert("Paste code first");return;}
+
+let [p1,p2,p3]=splitIntoThree(input);
+
+// Quad layers
+
+// p1: octal → b64 → octal → b64
+p1=toBase64(toOctal(toBase64(toOctal(p1))));
+
+// p2: b64 → octal → b64 → octal
+p2=toOctal(toBase64(toOctal(toBase64(p2))));
+
+// p3: octal → b64 → b64 → b64
+p3=toBase64(toBase64(toBase64(toOctal(p3))));
+
+let v1=randomString(18);
+let v2=randomString(20);
+let v3=randomString(22);
+let finalVar=randomString(16);
+
+let output =
+"-- (This text is obfuscated/secured by lobfuscator, lobfuscator.netlify.app)\n\n"+
+randomGarbage()+
+
+"local "+v1+"=[["+p1+"]]\n"+
+"local "+v2+"=[["+p2+"]]\n"+
+"local "+v3+"=[["+p3+"]]\n\n"+
+
+"local function b64decode(data)\n"+
+"local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'\n"+
+"data=data:gsub('[^'..b..'=]','')\n"+
+"return (data:gsub('.',function(x)\n"+
+"if x=='=' then return '' end\n"+
+"local r,f='',(b:find(x)-1)\n"+
+"for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end\n"+
+"return r\n"+
+"end):gsub('%d%d%d?%d?%d?%d?%d?%d?',function(x)\n"+
+"if #x~=8 then return '' end\n"+
+"local c=0\n"+
+"for i=1,8 do if x:sub(i,i)=='1' then c=c+2^(8-i) end end\n"+
+"return string.char(c)\n"+
+"end))\n"+
+"end\n\n"+
+
+"local function octDecode(str)\n"+
+"return (str:gsub('\\\\(%d+)',function(d)\n"+
+"return string.char(tonumber(d,8))\n"+
+"end))\n"+
+"end\n\n"+
+
+// reverse layers correctly
+v1+"=octDecode(b64decode(octDecode(b64decode("+v1+"))))\n"+
+v2+"=b64decode(octDecode(b64decode(octDecode("+v2+"))))\n"+
+v3+"=octDecode(b64decode(b64decode(b64decode("+v3+"))))\n\n"+
+
+"local "+finalVar+"="+v1+".."+v2+".."+v3+"\n"+
+"local f=loadstring or load\n"+
+"local fn=f("+finalVar+")\n"+
+"if fn then fn() end";
+
+document.getElementById("output").value=output;
+}
+
+function copyText(){
+let o=document.getElementById("output");
+o.select();
+document.execCommand("copy");
+alert("Copied!");
+}
+
+</script>
+</body>
+</html>
