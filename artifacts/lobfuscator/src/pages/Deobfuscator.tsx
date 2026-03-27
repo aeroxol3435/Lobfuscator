@@ -1,15 +1,53 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { deobfuscate, ORDER_NAMES } from "@/lib/obfuscation";
+
+const BASE = import.meta.env.BASE_URL;
+
+const TA_STYLE: React.CSSProperties = {
+  width: "100%",
+  background: "#0d1117",
+  color: "#e6edf3",
+  border: "1px solid #30363d",
+  borderRadius: 8,
+  padding: "12px 14px",
+  resize: "vertical",
+  fontFamily: "Consolas,'JetBrains Mono','Fira Code',monospace",
+  fontSize: 12.5,
+  lineHeight: 1.65,
+  outline: "none",
+  boxSizing: "border-box" as const,
+};
+
+const BTN: React.CSSProperties = {
+  border: "1px solid #30363d",
+  borderRadius: 7,
+  padding: "7px 14px",
+  fontSize: 12.5,
+  fontWeight: 600,
+  cursor: "pointer",
+  background: "#161b22",
+  color: "#c9d1d9",
+};
+
+const LABEL: React.CSSProperties = {
+  fontSize: 11,
+  color: "#8b949e",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.1em",
+  marginBottom: 6,
+  display: "block",
+};
 
 export default function Deobfuscator() {
   const [input, setInput] = useState("");
   const [result, setResult] = useState<{ success: boolean; order?: number; result?: string; error?: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const inFileRef = useRef<HTMLInputElement>(null);
+  const outFileRef = useRef<HTMLInputElement>(null);
 
   function handleDeobfuscate() {
     if (!input.trim()) return;
-    const r = deobfuscate(input);
-    setResult(r);
+    setResult(deobfuscate(input));
     setCopied(false);
   }
 
@@ -21,152 +59,148 @@ export default function Deobfuscator() {
     });
   }
 
+  function handleClearIn() { setInput(""); setResult(null); }
+  function handleClearOut() { setResult(null); }
+
+  async function handlePasteIn() {
+    try { setInput(await navigator.clipboard.readText()); } catch { /* ignore */ }
+  }
+
+  function handleFileIn(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setInput(ev.target?.result as string ?? "");
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  function handleFileOut(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { /* load into output display, not applicable here */ };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  function handleDownload() {
+    if (!result?.result) return;
+    const blob = new Blob([result.result], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "decoded.lua";
+    a.click();
+  }
+
+  const orderNum = result?.success && result.order ? result.order : null;
+
   return (
-    <div style={{ minHeight: "100vh", background: "hsl(222 47% 6%)", color: "hsl(210 40% 98%)", fontFamily: "system-ui, sans-serif", padding: "0", margin: "0" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 20px 80px" }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ display: "inline-block", background: "hsl(38 92% 50% / 0.15)", border: "1px solid hsl(38 92% 50% / 0.4)", borderRadius: 8, padding: "4px 14px", marginBottom: 16, fontSize: 12, color: "hsl(38 92% 70%)", letterSpacing: "0.15em", textTransform: "uppercase" }}>
-            Secret Access — Deobfuscator
+    <div style={{ minHeight: "100vh", background: "#0d1117", color: "#e6edf3", fontFamily: "Inter,system-ui,sans-serif", margin: 0, padding: 0 }}>
+      {/* Header */}
+      <div style={{ borderBottom: "1px solid #21262d", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#f59e0b,#d97706)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+            🔓
           </div>
-          <h1 style={{ fontSize: "clamp(2rem, 6vw, 3.5rem)", fontWeight: 800, margin: "0 0 12px", background: "linear-gradient(135deg, #fb923c, #f59e0b, #fbbf24)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
-            De-lobfuscator
+          <span style={{ fontWeight: 700, fontSize: 18, letterSpacing: "-0.01em" }}>De-lobfuscator</span>
+          <span style={{ background: "#21262d", border: "1px solid #30363d", borderRadius: 20, padding: "2px 10px", fontSize: 11, color: "#f59e0b" }}>Secret</span>
+        </div>
+        <a href={BASE} style={{ ...BTN, textDecoration: "none", fontSize: 12, color: "#8b949e" }}>
+          ← Obfuscator
+        </a>
+      </div>
+
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 20px 60px" }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <h1 style={{ fontSize: "clamp(1.8rem,4vw,2.6rem)", fontWeight: 800, margin: "0 0 10px", background: "linear-gradient(135deg,#fbbf24,#f59e0b,#d97706)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.03em" }}>
+            Decode Obfuscated Code
           </h1>
-          <p style={{ color: "hsl(215 20% 55%)", fontSize: 15, margin: 0 }}>
-            Paste obfuscated lobfuscator code to decode it. Only accepts valid lobfuscator output.
+          <p style={{ color: "#8b949e", fontSize: 14, margin: 0 }}>
+            Paste lobfuscator output. Only accepts valid lobfuscator code with the correct header.
           </p>
         </div>
 
-        {result && result.success && result.order && (
-          <div style={{ background: "hsl(38 92% 50% / 0.1)", border: "1px solid hsl(38 92% 50% / 0.35)", borderRadius: 8, padding: "10px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ background: "hsl(38 92% 50%)", color: "hsl(222 47% 6%)", borderRadius: 6, padding: "2px 10px", fontWeight: 700, fontSize: 13, fontFamily: "monospace" }}>
-              ORDER {result.order}
-            </span>
-            <span style={{ color: "hsl(38 92% 70%)", fontSize: 14 }}>
-              {ORDER_NAMES[result.order]}
-            </span>
-          </div>
-        )}
-
-        {result && !result.success && (
-          <div style={{ background: "hsl(0 72% 51% / 0.1)", border: "1px solid hsl(0 72% 51% / 0.4)", borderRadius: 8, padding: "10px 16px", marginBottom: 20, color: "hsl(0 72% 70%)", fontSize: 14 }}>
-            {result.error}
-          </div>
-        )}
-
-        <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 380px", minWidth: 280 }}>
-            <label style={{ display: "block", fontSize: 12, color: "hsl(215 20% 55%)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              Obfuscated Code Input
-            </label>
-            <textarea
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder={"-- (This text is obfuscated by lobfuscator)\n-- [3]\n\n--[[\n...\n]]--\n\n..."}
-              style={{
-                width: "100%",
-                height: 340,
-                background: "hsl(222 47% 9%)",
-                color: "hsl(210 40% 98%)",
-                border: "1px solid hsl(217 32% 20%)",
-                borderRadius: 8,
-                padding: "12px 14px",
-                resize: "vertical",
-                fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-                fontSize: 12,
-                lineHeight: 1.5,
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-              onFocus={e => { e.target.style.borderColor = "hsl(38 92% 50%)"; e.target.style.boxShadow = "0 0 0 2px hsl(38 92% 50% / 0.2)"; }}
-              onBlur={e => { e.target.style.borderColor = "hsl(217 32% 20%)"; e.target.style.boxShadow = "none"; }}
-            />
-            <button
-              onClick={handleDeobfuscate}
-              style={{
-                marginTop: 12,
-                width: "100%",
-                background: "hsl(38 92% 50%)",
-                color: "hsl(222 47% 6%)",
-                border: "none",
-                borderRadius: 8,
-                padding: "11px 28px",
-                fontWeight: 700,
-                fontSize: 14,
-                cursor: "pointer",
-              }}
-            >
-              Deobfuscate
-            </button>
-          </div>
-
-          <div style={{ flex: "1 1 380px", minWidth: 280 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-              <label style={{ display: "block", fontSize: 12, color: "hsl(215 20% 55%)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
-                Decoded Lua Code
-              </label>
-              {result?.result && (
-                <button
-                  onClick={handleCopy}
-                  style={{
-                    background: copied ? "hsl(142 76% 36%)" : "hsl(217 32% 14%)",
-                    color: "hsl(210 40% 98%)",
-                    border: "1px solid hsl(217 32% 25%)",
-                    borderRadius: 6,
-                    padding: "4px 12px",
-                    fontWeight: 600,
-                    fontSize: 12,
-                    cursor: "pointer",
-                  }}
-                >
-                  {copied ? "Copied!" : "Copy"}
-                </button>
+        <div style={{ display: "flex", gap: 20, alignItems: "flex-start", flexWrap: "wrap" as const }}>
+          {/* LEFT — Order info + input */}
+          <div style={{ flex: "1 1 420px", minWidth: 280 }}>
+            {/* Order info box */}
+            <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: 10, padding: 16, marginBottom: 16, minHeight: 80 }}>
+              <div style={{ fontSize: 11, color: "#8b949e", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 10 }}>Detected Obfuscation Order</div>
+              {orderNum ? (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                    <span style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#0d1117", borderRadius: 6, padding: "3px 12px", fontWeight: 800, fontSize: 14, fontFamily: "monospace" }}>
+                      ORDER {orderNum}
+                    </span>
+                    <span style={{ fontSize: 13, color: "#fbbf24", fontWeight: 600 }}>{ORDER_NAMES[orderNum]}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#8b949e" }}>
+                    Detected from hidden marker — decoded successfully.
+                  </div>
+                </div>
+              ) : result && !result.success ? (
+                <div style={{ color: "#f85149", fontSize: 13 }}>{result.error}</div>
+              ) : (
+                <div style={{ color: "#484f58", fontSize: 13 }}>Order info will appear here after decoding.</div>
               )}
             </div>
-            <textarea
-              readOnly
-              value={result?.result ?? ""}
-              placeholder="Decoded output will appear here..."
-              style={{
-                width: "100%",
-                height: 340,
-                background: "hsl(222 47% 9%)",
-                color: result?.result ? "hsl(142 76% 56%)" : "hsl(215 20% 35%)",
-                border: "1px solid hsl(217 32% 20%)",
-                borderRadius: 8,
-                padding: "12px 14px",
-                resize: "vertical",
-                fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-                fontSize: 13,
-                lineHeight: 1.6,
-                outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-            {result?.success && result.order && (
-              <div style={{ marginTop: 10, padding: "8px 12px", background: "hsl(222 47% 9%)", border: "1px solid hsl(217 32% 18%)", borderRadius: 8, fontSize: 12, color: "hsl(215 20% 50%)" }}>
-                Obfuscation type detected: <span style={{ color: "hsl(38 92% 65%)", fontWeight: 600 }}>Order {result.order} — {ORDER_NAMES[result.order]}</span>
-              </div>
-            )}
-          </div>
-        </div>
 
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 40 }}>
-          <a
-            href={import.meta.env.BASE_URL}
-            style={{
-              background: "transparent",
-              color: "hsl(215 20% 35%)",
-              border: "1px solid hsl(217 32% 18%)",
-              borderRadius: 8,
-              padding: "8px 20px",
-              fontSize: 12,
-              cursor: "pointer",
-              textDecoration: "none",
-              letterSpacing: "0.05em",
-            }}
-          >
-            ← Back to Obfuscator
-          </a>
+            <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: 12, padding: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={LABEL}>Obfuscated Input</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={handlePasteIn} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5 }}>Paste</button>
+                  <button onClick={() => inFileRef.current?.click()} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5 }}>Add File</button>
+                  <button onClick={handleClearIn} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5, color: "#f85149" }}>Clear</button>
+                </div>
+              </div>
+              <input ref={inFileRef} type="file" accept=".lua,.txt" style={{ display: "none" }} onChange={handleFileIn} />
+              <textarea
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                placeholder={"-- (This text is obfuscated by lobfuscator)\n\n--[[\n... (garbage) ...\n]]--\n\nlocal ... = [[...]]"}
+                style={{ ...TA_STYLE, height: 300, color: "#e6edf3" }}
+                onFocus={e => { e.target.style.borderColor = "#f59e0b"; e.target.style.boxShadow = "0 0 0 3px rgba(245,158,11,0.15)"; }}
+                onBlur={e => { e.target.style.borderColor = "#30363d"; e.target.style.boxShadow = "none"; }}
+              />
+              <button
+                onClick={handleDeobfuscate}
+                disabled={!input.trim()}
+                style={{ marginTop: 12, width: "100%", background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#0d1117", border: "none", borderRadius: 8, padding: "10px", fontWeight: 700, fontSize: 14, cursor: input.trim() ? "pointer" : "not-allowed", opacity: input.trim() ? 1 : 0.5 }}
+              >
+                Deobfuscate
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT — Output */}
+          <div style={{ flex: "1 1 420px", minWidth: 280 }}>
+            <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: 12, padding: 18, height: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <span style={LABEL}>Decoded Lua Code</span>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={handleCopy} disabled={!result?.result} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5, opacity: result?.result ? 1 : 0.4, background: copied ? "#1f6feb" : "#161b22", color: copied ? "#fff" : "#c9d1d9" }}>
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                  <button onClick={handleDownload} disabled={!result?.result} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5, opacity: result?.result ? 1 : 0.4 }}>Download</button>
+                  <button onClick={handleClearOut} disabled={!result} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5, opacity: result ? 1 : 0.4, color: "#f85149" }}>Clear</button>
+                </div>
+              </div>
+              <input ref={outFileRef} type="file" accept=".lua,.txt" style={{ display: "none" }} onChange={handleFileOut} />
+              <textarea
+                readOnly
+                value={result?.result ?? ""}
+                placeholder={"-- Decoded source code will appear here...\n-- Paste obfuscated code on the left\n-- then click Deobfuscate"}
+                style={{ ...TA_STYLE, height: 420, color: result?.result ? "#7ee787" : "#484f58" }}
+              />
+              {result?.result && (
+                <div style={{ marginTop: 8, fontSize: 11.5, color: "#8b949e" }}>
+                  {result.result.length.toLocaleString()} characters decoded
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>

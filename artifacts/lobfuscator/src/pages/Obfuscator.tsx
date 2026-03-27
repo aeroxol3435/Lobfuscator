@@ -1,18 +1,80 @@
-import { useState } from "react";
-import { obfuscate, ORDER_NAMES } from "@/lib/obfuscation";
+import { useState, useRef } from "react";
+import { obfuscate } from "@/lib/obfuscation";
+
+const BASE = import.meta.env.BASE_URL;
+
+const TA_STYLE: React.CSSProperties = {
+  width: "100%",
+  background: "#0d1117",
+  color: "#e6edf3",
+  border: "1px solid #30363d",
+  borderRadius: 8,
+  padding: "12px 14px",
+  resize: "vertical",
+  fontFamily: "Consolas,'JetBrains Mono','Fira Code',monospace",
+  fontSize: 12.5,
+  lineHeight: 1.65,
+  outline: "none",
+  boxSizing: "border-box" as const,
+};
+
+const BTN: React.CSSProperties = {
+  border: "1px solid #30363d",
+  borderRadius: 7,
+  padding: "7px 14px",
+  fontSize: 12.5,
+  fontWeight: 600,
+  cursor: "pointer",
+  background: "#161b22",
+  color: "#c9d1d9",
+  letterSpacing: "0.01em",
+};
+
+const BTN_PRIMARY: React.CSSProperties = {
+  ...BTN,
+  background: "linear-gradient(135deg,#8b5cf6,#7c3aed)",
+  color: "#fff",
+  border: "1px solid #6d28d9",
+  padding: "9px 28px",
+  fontSize: 14,
+  fontWeight: 700,
+};
+
+const LABEL: React.CSSProperties = {
+  fontSize: 11,
+  color: "#8b949e",
+  textTransform: "uppercase" as const,
+  letterSpacing: "0.1em",
+  marginBottom: 6,
+  display: "block",
+};
 
 export default function Obfuscator() {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
-  const [lastOrder, setLastOrder] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const outFileRef = useRef<HTMLInputElement>(null);
 
   function handleObfuscate() {
     if (!input.trim()) return;
     const result = obfuscate(input);
     setOutput(result.code);
-    setLastOrder(result.order);
     setCopied(false);
+    setSaveMsg("");
+    // Store original to MongoDB
+    const firstWords = input.trim().split(/\s+/).slice(0, 3).join("_").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 40) || "untitled";
+    setSaving(true);
+    fetch("/api/store", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: firstWords, content: input }),
+    })
+      .then(r => r.ok ? setSaveMsg("Saved to database.") : setSaveMsg(""))
+      .catch(() => setSaveMsg(""))
+      .finally(() => setSaving(false));
   }
 
   function handleCopy() {
@@ -23,150 +85,150 @@ export default function Obfuscator() {
     });
   }
 
+  function handleClear() { setInput(""); setOutput(""); setSaveMsg(""); }
+
+  async function handlePaste() {
+    try {
+      const text = await navigator.clipboard.readText();
+      setInput(text);
+    } catch { /* ignore */ }
+  }
+
+  function handleFileLoad(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setInput(ev.target?.result as string ?? "");
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  function handleOutFileLoad(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => setOutput(ev.target?.result as string ?? "");
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  function handleDownload() {
+    if (!output) return;
+    const blob = new Blob([output], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "obfuscated.lua";
+    a.click();
+  }
+
   function handleDeobfuscatorClick() {
-    const pw = window.prompt("Enter password to access the deobfuscator:");
+    const pw = window.prompt("Enter password:");
     if (pw === null) return;
-    if (pw === "ilovecookies67") {
-      window.location.href = import.meta.env.BASE_URL + "deobfuscator";
+    if (pw === "@ILoveCookies67!") {
+      window.location.href = BASE + "deobfuscator";
     } else {
       window.location.reload();
     }
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "hsl(222 47% 6%)", color: "hsl(210 40% 98%)", fontFamily: "system-ui, sans-serif", padding: "0", margin: "0" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto", padding: "40px 20px 80px" }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{ display: "inline-block", background: "hsl(263 70% 58% / 0.15)", border: "1px solid hsl(263 70% 58% / 0.4)", borderRadius: 8, padding: "4px 14px", marginBottom: 16, fontSize: 12, color: "hsl(263 70% 75%)", letterSpacing: "0.15em", textTransform: "uppercase" }}>
-            Lua Obfuscation Engine
+    <div style={{ minHeight: "100vh", background: "#0d1117", color: "#e6edf3", fontFamily: "Inter,system-ui,sans-serif", margin: 0, padding: 0 }}>
+      {/* Header */}
+      <div style={{ borderBottom: "1px solid #21262d", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#8b5cf6,#6366f1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+            🔐
           </div>
-          <h1 style={{ fontSize: "clamp(2rem, 6vw, 3.5rem)", fontWeight: 800, margin: "0 0 12px", background: "linear-gradient(135deg, #c084fc, #818cf8, #38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.02em" }}>
-            lobfuscator
+          <span style={{ fontWeight: 700, fontSize: 18, letterSpacing: "-0.01em" }}>lobfuscator</span>
+          <span style={{ background: "#21262d", border: "1px solid #30363d", borderRadius: 20, padding: "2px 10px", fontSize: 11, color: "#8b949e" }}>v2.0</span>
+        </div>
+        <button onClick={handleDeobfuscatorClick} style={{ ...BTN, fontSize: 12, color: "#8b949e" }}>
+          Deobfuscator
+        </button>
+      </div>
+
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 20px 60px" }}>
+        {/* Hero */}
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
+          <h1 style={{ fontSize: "clamp(2rem,5vw,3rem)", fontWeight: 800, margin: "0 0 10px", background: "linear-gradient(135deg,#c084fc,#818cf8,#38bdf8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", letterSpacing: "-0.03em" }}>
+            Lua Code Obfuscator
           </h1>
-          <p style={{ color: "hsl(215 20% 55%)", fontSize: 15, margin: 0 }}>
-            8 randomized obfuscation orders — your code, unreadable.
+          <p style={{ color: "#8b949e", fontSize: 14.5, margin: 0 }}>
+            20 advanced randomized obfuscation methods — Roblox compatible.
           </p>
         </div>
 
-        {lastOrder && (
-          <div style={{ background: "hsl(263 70% 58% / 0.1)", border: "1px solid hsl(263 70% 58% / 0.35)", borderRadius: 8, padding: "10px 16px", marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ background: "hsl(263 70% 58%)", color: "white", borderRadius: 6, padding: "2px 10px", fontWeight: 700, fontSize: 13, fontFamily: "monospace" }}>
-              ORDER {lastOrder}
-            </span>
-            <span style={{ color: "hsl(263 70% 75%)", fontSize: 14 }}>
-              {ORDER_NAMES[lastOrder]}
-            </span>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          {/* INPUT PANEL */}
+          <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: 12, padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <span style={LABEL}>Source Code</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={handlePaste} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5 }}>Paste</button>
+                <button onClick={() => fileRef.current?.click()} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5 }}>Add File</button>
+                <button onClick={handleClear} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5, color: "#f85149" }}>Clear</button>
+              </div>
+            </div>
+            <input ref={fileRef} type="file" accept=".lua,.txt" style={{ display: "none" }} onChange={handleFileLoad} />
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder={"-- Paste your Lua code here...\n-- Or use Paste / Add File above\n\nprint('Hello Roblox!')"}
+              style={{ ...TA_STYLE, height: 320, color: "#e6edf3" }}
+              onFocus={e => { e.target.style.borderColor = "#8b5cf6"; e.target.style.boxShadow = "0 0 0 3px rgba(139,92,246,0.15)"; }}
+              onBlur={e => { e.target.style.borderColor = "#30363d"; e.target.style.boxShadow = "none"; }}
+            />
+            <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+              <button
+                onClick={handleObfuscate}
+                disabled={!input.trim()}
+                style={{ ...BTN_PRIMARY, flex: 1, opacity: input.trim() ? 1 : 0.5, cursor: input.trim() ? "pointer" : "not-allowed" }}
+              >
+                Obfuscate
+              </button>
+            </div>
+            {saving && <div style={{ marginTop: 8, fontSize: 11.5, color: "#8b949e" }}>Saving to database...</div>}
+            {saveMsg && <div style={{ marginTop: 8, fontSize: 11.5, color: "#3fb950" }}>{saveMsg}</div>}
           </div>
-        )}
 
-        <div style={{ marginBottom: 12 }}>
-          <label style={{ display: "block", fontSize: 12, color: "hsl(215 20% 55%)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-            Lua Source Code
-          </label>
-          <textarea
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            placeholder="Paste your Lua code here..."
-            style={{
-              width: "100%",
-              height: 200,
-              background: "hsl(222 47% 9%)",
-              color: "hsl(210 40% 98%)",
-              border: "1px solid hsl(217 32% 20%)",
-              borderRadius: 8,
-              padding: "12px 14px",
-              resize: "vertical",
-              fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-              fontSize: 13,
-              lineHeight: 1.6,
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-            onFocus={e => { e.target.style.borderColor = "hsl(263 70% 58%)"; e.target.style.boxShadow = "0 0 0 2px hsl(263 70% 58% / 0.2)"; }}
-            onBlur={e => { e.target.style.borderColor = "hsl(217 32% 20%)"; e.target.style.boxShadow = "none"; }}
-          />
-        </div>
-
-        <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-          <button
-            onClick={handleObfuscate}
-            style={{
-              background: "hsl(263 70% 58%)",
-              color: "white",
-              border: "none",
-              borderRadius: 8,
-              padding: "10px 28px",
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: "pointer",
-              flex: 1,
-            }}
-          >
-            Obfuscate
-          </button>
-          <button
-            onClick={handleCopy}
-            disabled={!output}
-            style={{
-              background: copied ? "hsl(142 76% 36%)" : "hsl(217 32% 14%)",
-              color: "hsl(210 40% 98%)",
-              border: "1px solid hsl(217 32% 25%)",
-              borderRadius: 8,
-              padding: "10px 20px",
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: output ? "pointer" : "not-allowed",
-              opacity: output ? 1 : 0.5,
-              minWidth: 130,
-            }}
-          >
-            {copied ? "Copied!" : "Copy Output"}
-          </button>
-        </div>
-
-        {output && (
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", fontSize: 12, color: "hsl(215 20% 55%)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.1em" }}>
-              Obfuscated Output
-            </label>
+          {/* OUTPUT PANEL */}
+          <div style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: 12, padding: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <span style={LABEL}>Obfuscated Output</span>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={handleCopy} disabled={!output} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5, opacity: output ? 1 : 0.4, background: copied ? "#1f6feb" : "#161b22", color: copied ? "#fff" : "#c9d1d9" }}>
+                  {copied ? "Copied!" : "Copy"}
+                </button>
+                <button onClick={handleDownload} disabled={!output} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5, opacity: output ? 1 : 0.4 }}>Download</button>
+                <button onClick={() => outFileRef.current?.click()} style={{ ...BTN, padding: "4px 11px", fontSize: 11.5 }}>Load File</button>
+              </div>
+            </div>
+            <input ref={outFileRef} type="file" accept=".lua,.txt" style={{ display: "none" }} onChange={handleOutFileLoad} />
             <textarea
               readOnly
               value={output}
-              style={{
-                width: "100%",
-                height: 360,
-                background: "hsl(222 47% 9%)",
-                color: "hsl(142 76% 56%)",
-                border: "1px solid hsl(217 32% 20%)",
-                borderRadius: 8,
-                padding: "12px 14px",
-                resize: "vertical",
-                fontFamily: "'JetBrains Mono', 'Fira Code', Consolas, monospace",
-                fontSize: 11,
-                lineHeight: 1.5,
-                outline: "none",
-                boxSizing: "border-box",
-              }}
+              placeholder={"-- Obfuscated output will appear here...\n-- Click Obfuscate to generate"}
+              style={{ ...TA_STYLE, height: 320, color: output ? "#7ee787" : "#484f58" }}
             />
+            <div style={{ marginTop: 12, fontSize: 11.5, color: "#8b949e", minHeight: 20 }}>
+              {output ? `${output.length.toLocaleString()} characters` : ""}
+            </div>
           </div>
-        )}
+        </div>
 
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 40 }}>
-          <button
-            onClick={handleDeobfuscatorClick}
-            style={{
-              background: "transparent",
-              color: "hsl(215 20% 35%)",
-              border: "1px solid hsl(217 32% 18%)",
-              borderRadius: 8,
-              padding: "8px 20px",
-              fontSize: 12,
-              cursor: "pointer",
-              letterSpacing: "0.05em",
-            }}
-          >
-            Deobfuscator
-          </button>
+        {/* Info cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginTop: 24 }}>
+          {[
+            { icon: "🎲", title: "20 Orders", desc: "Randomly selected from 20 advanced encoding chains each time" },
+            { icon: "🎮", title: "Roblox Ready", desc: "Compatible with Luau — tested decimal escapes, base64, ROT13" },
+            { icon: "🔒", title: "Multi-Layer", desc: "Up to 7 encoding layers including base64, decimal, reverse, ROT13" },
+          ].map(c => (
+            <div key={c.title} style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: 10, padding: "14px 16px" }}>
+              <div style={{ fontSize: 22, marginBottom: 6 }}>{c.icon}</div>
+              <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{c.title}</div>
+              <div style={{ fontSize: 12, color: "#8b949e", lineHeight: 1.5 }}>{c.desc}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
