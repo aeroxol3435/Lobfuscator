@@ -1,0 +1,11 @@
+[build]
+  command = "cd artifacts/lobfuscator && npm install && npm run build"
+  publish = "artifacts/lobfuscator/dist"
+
+[build.environment]
+  NODE_VERSION = "20.19.0"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
