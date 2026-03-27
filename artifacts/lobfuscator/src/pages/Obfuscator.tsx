@@ -154,7 +154,7 @@ export default function Obfuscator() {
             Lua Code Obfuscator
           </h1>
           <p style={{ color: "#8b949e", fontSize: 14.5, margin: 0 }}>
-            20 advanced randomized obfuscation methods — Roblox compatible.
+            Strong, Roblox-compatible Lua protection — no plugins required.
           </p>
         </div>
 
@@ -219,9 +219,9 @@ export default function Obfuscator() {
         {/* Info cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginTop: 24 }}>
           {[
-            { icon: "🎲", title: "20 Orders", desc: "Randomly selected from 20 advanced encoding chains each time" },
-            { icon: "🎮", title: "Roblox Ready", desc: "Compatible with Luau — tested decimal escapes, base64, ROT13" },
-            { icon: "🔒", title: "Multi-Layer", desc: "Up to 7 encoding layers including base64, decimal, reverse, ROT13" },
+            { icon: "🎲", title: "Randomized", desc: "A different protection method is applied every time you obfuscate" },
+            { icon: "🎮", title: "Roblox Ready", desc: "Fully compatible with Luau — runs in Roblox without any modifications" },
+            { icon: "🔒", title: "Multi-Layer", desc: "Multiple layers of protection are stacked to make reversal extremely difficult" },
           ].map(c => (
             <div key={c.title} style={{ background: "#161b22", border: "1px solid #21262d", borderRadius: 10, padding: "14px 16px" }}>
               <div style={{ fontSize: 22, marginBottom: 6 }}>{c.icon}</div>

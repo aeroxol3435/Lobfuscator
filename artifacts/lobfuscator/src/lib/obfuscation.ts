@@ -1,15 +1,36 @@
-// Safe chars - NO [ or ] to prevent premature ]] closing of Lua long comments
-const GARBAGE_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*_-+=~`|<>?/\\;:'\",. (){}";
+// Safe chars for junk after -- (NO [ or ] to prevent premature ]] closing)
+const GARBAGE_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*_+=~`|<>?/\\;:'\",. (){}";
+// Alphanumeric only — used for junk around the hidden tag so the regex reliably finds it
+const ALPHANUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+// Lua-like keywords to mix into the 5-word code prefix on each garbage line
+const LUA_KEYWORDS = ["local","function","return","end","if","then","else","for","while","do","not","and","or","true","false","nil","repeat","until","break","in"];
+const ALPHA_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-function rndGarbageChar(): string {
-  return GARBAGE_CHARS[Math.floor(Math.random() * GARBAGE_CHARS.length)];
+function rndAlphaNum(len: number): string {
+  let s = "";
+  for (let i = 0; i < len; i++) s += ALPHANUM_CHARS[Math.floor(Math.random() * ALPHANUM_CHARS.length)];
+  return s;
 }
 
 function rndGarbageLine(len = 0): string {
-  const l = len || 120 + Math.floor(Math.random() * 80);
+  const l = len || 80 + Math.floor(Math.random() * 60);
   let s = "";
-  for (let i = 0; i < l; i++) s += rndGarbageChar();
+  for (let i = 0; i < l; i++) s += GARBAGE_CHARS[Math.floor(Math.random() * GARBAGE_CHARS.length)];
   return s;
+}
+
+// Generates a fake Lua-like identifier word
+function rndCodeWord(): string {
+  if (Math.random() < 0.25) return LUA_KEYWORDS[Math.floor(Math.random() * LUA_KEYWORDS.length)];
+  const len = 3 + Math.floor(Math.random() * 9);
+  let s = ALPHA_CHARS[Math.floor(Math.random() * ALPHA_CHARS.length)];
+  for (let i = 1; i < len; i++) s += ALPHANUM_CHARS[Math.floor(Math.random() * ALPHANUM_CHARS.length)];
+  return s;
+}
+
+// 5 code-like words joined by spaces — the visible prefix of each garbage line
+function rndCodePrefix(): string {
+  return Array.from({ length: 5 }, rndCodeWord).join(" ");
 }
 
 function rndVarName(len: number): string {
@@ -69,121 +90,121 @@ interface Order {
 
 const ORDERS: Order[] = [
   {
-    name: "Quad B-D-B-D",
+    name: "Protocol I",
     encode: p => toBase64(toDecEsc(toBase64(toDecEsc(p)))),
     decode: e => fromDecEsc(fromBase64(fromDecEsc(fromBase64(e)))),
     luaDec: "decEsc(b64d(decEsc(b64d(V))))",
   },
   {
-    name: "Mirror R-B-R-B",
+    name: "Protocol II",
     encode: p => toRev(toBase64(toRev(toBase64(p)))),
     decode: e => fromBase64(toRev(fromBase64(toRev(e)))),
     luaDec: "b64d(rev(b64d(rev(V))))",
   },
   {
-    name: "Triple Base64 + Decimal",
+    name: "Protocol III",
     encode: p => toBase64(toBase64(toBase64(toDecEsc(p)))),
     decode: e => fromDecEsc(fromBase64(fromBase64(fromBase64(e)))),
     luaDec: "decEsc(b64d(b64d(b64d(V))))",
   },
   {
-    name: "Reverse Octal Surge",
+    name: "Protocol IV",
     encode: p => toBase64(toDecEsc(toRev(toBase64(p)))),
     decode: e => fromBase64(toRev(fromDecEsc(fromBase64(e)))),
     luaDec: "b64d(rev(decEsc(b64d(V))))",
   },
   {
-    name: "ROT13 Decimal Burst",
+    name: "Protocol V",
     encode: p => toDecEsc(toBase64(toROT13(p))),
     decode: e => toROT13(fromBase64(fromDecEsc(e))),
     luaDec: "rot13(b64d(decEsc(V)))",
   },
   {
-    name: "Double Base64 ROT13",
+    name: "Protocol VI",
     encode: p => toBase64(toROT13(toBase64(p))),
     decode: e => fromBase64(toROT13(fromBase64(e))),
     luaDec: "b64d(rot13(b64d(V)))",
   },
   {
-    name: "Reverse Decimal Wrap",
+    name: "Protocol VII",
     encode: p => toRev(toDecEsc(toBase64(toRev(p)))),
     decode: e => toRev(fromBase64(fromDecEsc(toRev(e)))),
     luaDec: "rev(b64d(decEsc(rev(V))))",
   },
   {
-    name: "ROT13 Decimal B64 Stack",
+    name: "Protocol VIII",
     encode: p => toBase64(toDecEsc(toROT13(toBase64(p)))),
     decode: e => fromBase64(toROT13(fromDecEsc(fromBase64(e)))),
     luaDec: "b64d(rot13(decEsc(b64d(V))))",
   },
   {
-    name: "ROT13 Mirror Reverse",
+    name: "Protocol IX",
     encode: p => toROT13(toBase64(toRev(toDecEsc(p)))),
     decode: e => fromDecEsc(toRev(fromBase64(toROT13(e)))),
     luaDec: "decEsc(rev(b64d(rot13(V))))",
   },
   {
-    name: "Base64 Spiral ROT13",
+    name: "Protocol X",
     encode: p => toBase64(toRev(toROT13(toDecEsc(p)))),
     decode: e => fromDecEsc(toROT13(toRev(fromBase64(e)))),
     luaDec: "decEsc(rot13(rev(b64d(V))))",
   },
   {
-    name: "5-Layer ROT Mirror B64",
+    name: "Protocol XI",
     encode: p => toDecEsc(toROT13(toBase64(toRev(toBase64(p))))),
     decode: e => fromBase64(toRev(fromBase64(toROT13(fromDecEsc(e))))),
     luaDec: "b64d(rev(b64d(rot13(decEsc(V)))))",
   },
   {
-    name: "5-Layer Rev Decimal ROT",
+    name: "Protocol XII",
     encode: p => toBase64(toRev(toDecEsc(toROT13(toBase64(p))))),
     decode: e => fromBase64(toROT13(fromDecEsc(toRev(fromBase64(e))))),
     luaDec: "b64d(rot13(decEsc(rev(b64d(V)))))",
   },
   {
-    name: "5-Layer ROT B64 Octal Rev",
+    name: "Protocol XIII",
     encode: p => toROT13(toBase64(toDecEsc(toRev(toROT13(p))))),
     decode: e => toROT13(toRev(fromDecEsc(fromBase64(toROT13(e))))),
     luaDec: "rot13(rev(decEsc(b64d(rot13(V)))))",
   },
   {
-    name: "5-Layer Rev ROT B64 Dec",
+    name: "Protocol XIV",
     encode: p => toRev(toROT13(toBase64(toDecEsc(toBase64(p))))),
     decode: e => fromBase64(fromDecEsc(fromBase64(toROT13(toRev(e))))),
     luaDec: "b64d(decEsc(b64d(rot13(rev(V)))))",
   },
   {
-    name: "5-Layer B64 Dec B64 ROT Rev",
+    name: "Protocol XV",
     encode: p => toBase64(toDecEsc(toBase64(toROT13(toRev(p))))),
     decode: e => toRev(toROT13(fromBase64(fromDecEsc(fromBase64(e))))),
     luaDec: "rev(rot13(b64d(decEsc(b64d(V)))))",
   },
   {
-    name: "5-Layer Dec B64 ROT Rev",
+    name: "Protocol XVI",
     encode: p => toDecEsc(toBase64(toROT13(toBase64(toRev(p))))),
     decode: e => toRev(fromBase64(toROT13(fromBase64(fromDecEsc(e))))),
     luaDec: "rev(b64d(rot13(b64d(decEsc(V)))))",
   },
   {
-    name: "6-Layer ROT Dec Rev B64 ROT B64",
+    name: "Protocol XVII",
     encode: p => toROT13(toDecEsc(toRev(toBase64(toROT13(toBase64(p)))))),
     decode: e => fromBase64(toROT13(fromBase64(toRev(fromDecEsc(toROT13(e)))))),
     luaDec: "b64d(rot13(b64d(rev(decEsc(rot13(V))))))",
   },
   {
-    name: "6-Layer B64 ROT Rev Dec B64 Rev",
+    name: "Protocol XVIII",
     encode: p => toBase64(toROT13(toRev(toDecEsc(toBase64(toRev(p)))))),
     decode: e => toRev(fromBase64(fromDecEsc(toRev(toROT13(fromBase64(e)))))),
     luaDec: "rev(b64d(decEsc(rev(rot13(b64d(V))))))",
   },
   {
-    name: "6-Layer Rev B64 ROT Dec ROT B64",
+    name: "Protocol XIX",
     encode: p => toRev(toBase64(toROT13(toDecEsc(toROT13(toBase64(p)))))),
     decode: e => fromBase64(toROT13(fromDecEsc(toROT13(fromBase64(toRev(e)))))),
     luaDec: "b64d(rot13(decEsc(rot13(b64d(rev(V))))))",
   },
   {
-    name: "Maximum Chaos — 7-Layer",
+    name: "Protocol XX",
     encode: p => toDecEsc(toRev(toROT13(toBase64(toRev(toROT13(toBase64(p))))))),
     decode: e => fromBase64(toROT13(toRev(fromBase64(toROT13(toRev(fromDecEsc(e))))))),
     luaDec: "b64d(rot13(rev(b64d(rot13(rev(decEsc(V)))))))",
@@ -212,12 +233,13 @@ function makeGarbage(order: number): string {
   let lines: string[] = [];
   for (let i = 0; i < LINES; i++) {
     if (i === insertAt) {
-      // Hidden order tag disguised as a hex memory address comment
-      const junk1 = rndGarbageLine(6);
-      const junk2 = rndGarbageLine(6);
-      lines.push(`-- 0x${junk1}${tag}${junk2}MEM`);
+      // Hidden order tag: looks like a normal garbage line but contains alphanumeric junk around the 4-char hex tag
+      // junk1/junk2 MUST be alphanumeric so the regex /[A-Za-z0-9]{6}([0-9A-F]{4})[A-Za-z0-9]{6}MEM/ reliably matches
+      const junk1 = rndAlphaNum(6);
+      const junk2 = rndAlphaNum(6);
+      lines.push(`${rndCodePrefix()} -- 0x${junk1}${tag}${junk2}MEM`);
     } else {
-      lines.push(rndGarbageLine());
+      lines.push(`${rndCodePrefix()} -- ${rndGarbageLine()}`);
     }
   }
   return "--[[\n" + lines.join("\n") + "\n]]--\n\n";
@@ -287,7 +309,7 @@ export function obfuscate(input: string): ObfuscationResult {
   const garbage = makeGarbage(order);
 
   const code =
-    `-- (This text is obfuscated by lobfuscator)\n\n` +
+    `-- This file is obfuscated by Lobfuscator, Lobfuscator.netlify.app\n\n` +
     garbage +
     `local ${v1}=[[${enc1}]]\n` +
     `local ${v2}=[[${enc2}]]\n` +
@@ -315,8 +337,8 @@ export interface DeobfResult {
 
 export function deobfuscate(input: string): DeobfResult {
   const firstLine = input.split("\n")[0]?.trim() ?? "";
-  if (!firstLine.toLowerCase().includes("this text is obfuscated by")) {
-    return { success: false, error: "Invalid input: must start with -- (This text is obfuscated by lobfuscator)" };
+  if (!firstLine.toLowerCase().includes("lobfuscator")) {
+    return { success: false, error: "Invalid input: this does not appear to be a Lobfuscator file." };
   }
 
   // Find hidden order tag: -- 0x<6chars><TAG><6chars>MEM

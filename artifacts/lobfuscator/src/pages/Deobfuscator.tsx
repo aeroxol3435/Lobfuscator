@@ -159,7 +159,7 @@ export default function Deobfuscator() {
               <textarea
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                placeholder={"-- (This text is obfuscated by lobfuscator)\n\n--[[\n... (garbage) ...\n]]--\n\nlocal ... = [[...]]"}
+                placeholder={"-- This file is obfuscated by Lobfuscator, Lobfuscator.netlify.app\n\n--[[\n... (garbage block) ...\n]]--\n\nlocal ... = [[...]]"}
                 style={{ ...TA_STYLE, height: 300, color: "#e6edf3" }}
                 onFocus={e => { e.target.style.borderColor = "#f59e0b"; e.target.style.boxShadow = "0 0 0 3px rgba(245,158,11,0.15)"; }}
                 onBlur={e => { e.target.style.borderColor = "#30363d"; e.target.style.boxShadow = "none"; }}
