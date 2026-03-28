@@ -227,22 +227,35 @@ export function decodeOrderTag(tag: string): number {
 }
 
 function makeGarbage(order: number): string {
-  const LINES = 400;
-  const insertAt = Math.floor(LINES / 2) + Math.floor(Math.random() * 20 - 10);
+  const BLOCKS = 1000; // can increase safely
   const tag = encodeOrderTag(order);
-  let lines: string[] = [];
-  for (let i = 0; i < LINES; i++) {
-    if (i === insertAt) {
-      // Hidden order tag: looks like a normal garbage line but contains alphanumeric junk around the 4-char hex tag
-      // junk1/junk2 MUST be alphanumeric so the regex /[A-Za-z0-9]{6}([0-9A-F]{4})[A-Za-z0-9]{6}MEM/ reliably matches
+
+  let out = "";
+
+  for (let i = 0; i < BLOCKS; i++) {
+    const a = rndVarName(10 + Math.floor(Math.random() * 6));
+    const b = rndVarName(10 + Math.floor(Math.random() * 6));
+    const c = rndVarName(10 + Math.floor(Math.random() * 6));
+
+    const n1 = Math.floor(Math.random() * 999999);
+    const n2 = Math.floor(Math.random() * 999999);
+
+    if (i === Math.floor(BLOCKS / 2)) {
       const junk1 = rndAlphaNum(6);
       const junk2 = rndAlphaNum(6);
-      lines.push(`${rndCodePrefix()} -- 0x${junk1}${tag}${junk2}MEM`);
+
+      // Hidden marker disguised inside valid Lua
+      out += `local ${a} = 0x${junk1}${tag}${junk2}\n`;
     } else {
-      lines.push(`${rndCodePrefix()} -- ${rndGarbageLine()}`);
+      out += `
+local ${a} = (${n1} * ${n2}) % ${n2 + 1}
+local ${b} = tostring(${a}) .. tostring(${n1})
+local ${c} = string.reverse(${b})
+`;
     }
   }
-  return "--[[\n" + lines.join("\n") + "\n]]--\n\n";
+
+  return out + "\n";
 }
 
 // ── Lua runtime helpers (injected into every obfuscated script) ───────────────
